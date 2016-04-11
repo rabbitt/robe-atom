@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 
-robe_ruby_path = ARGV[0]
+robe_lib_path = File.realpath(File.join(ARGV[0].gsub('~', ENV['HOME']), 'lib'))
 
 unless defined? Robe
-  $LOAD_PATH.unshift(robe_ruby_path + '/lib')
+  $LOAD_PATH.unshift(robe_lib_path)
   require 'robe'
 end
 p Robe.start(0)

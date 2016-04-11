@@ -91,9 +91,35 @@ class RobeRunner
         .then (isRails) -> if isRails then 'rails' else 'bundler'
     .then (type) ->
       switch type
-        when 'rails'    then 'bundle exec rails runner'
-        when 'bundler'  then 'bundle exec'
-        when 'none'     then 'ruby -Ilib'
+        when 'rails'    then "ruby -S bundle exec rails runner"
+        when 'bundler'  then "ruby -S bundle exec"
+        when 'none'     then "ruby -Ilib"
+    .then (command) =>
+      console.log("found command, checking for prefix on -> #{command}")
+      @_determineRVM(projectPath).then (prefix) =>
+        console.log "running command -> #{prefix}#{command}"
+        "#{prefix}#{command}"
+
+  _determineRVM: (projectPath) ->
+    new File(path.join(process.env['HOME'], '.rvm'))
+    .exists()
+      .then (rvmDirExists) ->
+        return '' unless rvmDirExists
+        console.log("Found an RVM directory")
+        process.env['JRUBY_OPTS'] = '--2.0 --dev'
+
+        files = [ '.rvmrc', '.versions.conf', '.ruby-version', '.rbfu-version', '.rbenv-version' ]
+        futures = (new File(path.join(projectPath, file)).exists() for file in files)
+
+        Promise.all(futures).then (file_values) ->
+          for exists, index in file_values
+            console.log("checking -> #{files[index]} = #{exists.toString()}")
+            return true if exists
+          return false
+        .then (have_config) ->
+          process.env['rvm_in_flag'] = ''
+          if have_config then console.log("found a valid version file") else console.log("no valid version file")
+          return if have_config then "rvm in #{projectPath} do " else "rvm default exec "
 
   _determineRails: (projectPath, content) ->
     return false unless !!content?.match /\srailties\s/
